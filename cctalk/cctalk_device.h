@@ -127,12 +127,12 @@ class CctalkDevice : public QObject {
 		/// Request initializing the device from ShutDown state.
 		/// Starts event timer.
 		/// \return true if the request was successfully sent.
-		bool initialize(std::function<void(const QString& error_msg)> finish_callback);
+		bool initialize(const std::function<void(const QString& error_msg)>& finish_callback);
 
 		/// Request the device to be switched to ShutDown state.
 		/// Stops event timer.
 		/// \return true if the request was successfully sent.
-		bool shutdown(std::function<void(const QString& error_msg)> finish_callback);
+		bool shutdown(const std::function<void(const QString& error_msg)>& finish_callback);
 
 
 	protected:
@@ -169,7 +169,7 @@ class CctalkDevice : public QObject {
 
 		/// Request switching the device state.
 		/// \return true if the request was successfully sent.
-		bool requestSwitchDeviceState(CcDeviceState state, std::function<void(const QString& error_msg)> finish_callback);
+		bool requestSwitchDeviceState(CcDeviceState state, const std::function<void(const QString& error_msg)>& finish_callback);
 
 
 	protected:
@@ -178,77 +178,77 @@ class CctalkDevice : public QObject {
 		/// If the switch request fails, the devices is switched to InitializationFailed state.
 		/// This sets the stored member variables.
 		/// \return true if preconditions were acceptable and the switch has been initiated.
-		bool switchStateInitialized(std::function<void(const QString& error_msg)> finish_callback);
+		bool switchStateInitialized(const std::function<void(const QString& error_msg)>& finish_callback);
 
 		/// Switch to NormalAccepting state.
-		bool switchStateNormalAccepting(std::function<void(const QString& error_msg)> finish_callback);
+		bool switchStateNormalAccepting(const std::function<void(const QString& error_msg)>& finish_callback);
 
 		/// Switch to NormalRejecting state.
-		bool switchStateNormalRejecting(std::function<void(const QString& error_msg)> finish_callback);
+		bool switchStateNormalRejecting(const std::function<void(const QString& error_msg)>& finish_callback);
 
 		/// Switch to DiagnosticsPolling state.
-		bool switchStateDiagnosticsPolling(std::function<void(const QString& error_msg)> finish_callback);
+		bool switchStateDiagnosticsPolling(const std::function<void(const QString& error_msg)>& finish_callback);
 
 		/// Switch to ShutDown state.
-		bool switchStateShutDown(std::function<void(const QString& error_msg)> finish_callback);
+		bool switchStateShutDown(const std::function<void(const QString& error_msg)>& finish_callback);
 
 
 		/// Send SimplePoll and return for ACK.
-		void requestCheckAlive(std::function<void(const QString& error_msg, bool alive)> finish_callback);
+		void requestCheckAlive(const std::function<void(const QString& error_msg, bool alive)>& finish_callback);
 
 		/// Request manufacturing information info from the device.
 		/// This includes category, serial number, manufacturer, ...
-		void requestManufacturingInfo(std::function<void(const QString& error_msg, CcCategory category, const QString& info)> finish_callback);
+		void requestManufacturingInfo(const std::function<void(const QString& error_msg, CcCategory category, const QString& info)>& finish_callback);
 
 		/// Get device-recommended polling interval in ms.
-		void requestPollingInterval(std::function<void(const QString& error_msg, quint64 msec)> finish_callback);
+		void requestPollingInterval(const std::function<void(const QString& error_msg, quint64 msec)>& finish_callback);
 
 		/// Request inhibit status modification. This is needed to enable coin/bill acceptance.
-		void requestSetInhibitStatus(quint8 accept_mask1, quint8 accept_mask2, std::function<void(const QString& error_msg)> finish_callback);
+		void requestSetInhibitStatus(quint8 accept_mask1, quint8 accept_mask2, const std::function<void(const QString& error_msg)>& finish_callback);
 
 		/// Request master inhibit status modification. This is needed to enable coin/bill acceptance.
-		void requestSetMasterInhibitStatus(bool inhibit, std::function<void(const QString& error_msg)> finish_callback);
+		void requestSetMasterInhibitStatus(bool inhibit, const std::function<void(const QString& error_msg)>& finish_callback);
 
 		/// Request master inhibit status retrieval,
-		void requestMasterInhibitStatus(std::function<void(const QString& error_msg, bool inhibit)> finish_callback);
+		void requestMasterInhibitStatus(const std::function<void(const QString& error_msg, bool inhibit)>& finish_callback);
 
 		/// Request bill validator operating mode modification.
-		void requestSetBillOperatingMode(bool use_stacker, bool use_escrow, std::function<void(const QString& error_msg)> finish_callback);
+		void requestSetBillOperatingMode(bool use_stacker, bool use_escrow, const std::function<void(const QString& error_msg)>& finish_callback);
 
 		/// Request coin / bill identifiers (quantity for bills, bill/coin names) and country scaling data (bills).
-		void requestIdentifiers(std::function<void(const QString& error_msg, const QMap<quint8, CcIdentifier>& identifiers)> finish_callback);
+		void requestIdentifiers(const std::function<void(const QString& error_msg, const QMap<quint8, CcIdentifier>& identifiers)>& finish_callback);
 
 		/// Request buffered credit (coins / bills) events or error events using ReadBufferedBillEvents
 		/// or ReadBufferedCredit commands. This function should be executed repeatedly when polling.
 		/// \c event_data contains the event log from newest (at offset 0) to oldest (at offset 4).
 		/// A command timeout here is not an error condition - an empty event counter / log and
 		// an empty error message are returned. The caller should ignore this and continue normally.
-		void requestBufferedCreditEvents(std::function<void(const QString& error_msg,
-				quint8 event_counter, const QVector<CcEventData>& event_data)> finish_callback);
+		void requestBufferedCreditEvents(const std::function<void(const QString& error_msg,
+				quint8 event_counter, const QVector<CcEventData>& event_data)>& finish_callback);
 
 		/// Process the credit/event log. This is used by timerIteration().
 		void processCreditEventLog(bool accepting, const QString& event_log_cmd_error_msg, quint8 event_counter,
-				const QVector<CcEventData>& event_data, std::function<void()> finish_callback);
+				const QVector<CcEventData>& event_data, const std::function<void()>& finish_callback);
 
 		/// Route a bill that is held in escrow.
 		void requestRouteBill(CcBillRouteCommandType route,
-				std::function<void(const QString& error_msg, CcBillRouteStatus status)> finish_callback);
+				const std::function<void(const QString& error_msg, CcBillRouteStatus status)>& finish_callback);
 
 		/// Request self-check (diagnostics mode). This function should be executed repeatedly
 		/// when polling in diagnostics mode.
-		void requestSelfCheck(std::function<void(const QString& error_msg, CcFaultCode fault_code)> finish_callback);
+		void requestSelfCheck(const std::function<void(const QString& error_msg, CcFaultCode fault_code)>& finish_callback);
 
 		/// Request soft reset. Finish callback is called when the device accepts the reset command.
-		void requestResetDevice(std::function<void(const QString& error_msg)> finish_callback);
+		void requestResetDevice(const std::function<void(const QString& error_msg)>& finish_callback);
 
 		/// Call requestResetDevice() and set the state to UninitializedDown.
-		void requestResetDeviceWithState(std::function<void(const QString& error_msg)> finish_callback);
+		void requestResetDeviceWithState(const std::function<void(const QString& error_msg)>& finish_callback);
 
 
 	public:
 
 		/// Get device status as set by the latest status-updating function
-		CcDeviceState getDeviceState() const;
+		[[nodiscard]] CcDeviceState getDeviceState() const;
 
 
 	protected:
@@ -260,16 +260,16 @@ class CctalkDevice : public QObject {
 	public:
 
 		/// Get requestManufacturingInfo() category result.
-		CcCategory getStoredDeviceCategory() const;
+		[[nodiscard]] CcCategory getStoredDeviceCategory() const;
 
 		/// Get requestManufacturingInfo() free-form string result.
-		QString getStoredManufacturingInfo() const;
+		[[nodiscard]] QString getStoredManufacturingInfo() const;
 
 		/// Get detectPollingInterval() result
-		int getStoredPollingInterval() const;
+		[[nodiscard]] int getStoredPollingInterval() const;
 
 		/// Get requestIdentifiers() result
-		QMap<quint8, CcIdentifier> getStoredIndentifiers() const;
+		[[nodiscard]] QMap<quint8, CcIdentifier> getStoredIndentifiers() const;
 
 
 	private:

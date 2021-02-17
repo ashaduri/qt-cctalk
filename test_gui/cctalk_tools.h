@@ -21,12 +21,12 @@ License: BSD-3-Clause
 /// reads the config file to get the device settings.
 /// \return Error string or empty string if no error.
 inline QString setUpCctalkDevices(qtcc::BillValidatorDevice* bill_validator, qtcc::CoinAcceptorDevice* coin_acceptor,
-		std::function<void(QString message)> message_logger)
+		const std::function<void(QString message)>& message_logger)
 {
 	QStringList port_devices;
 	{
 		QList<QSerialPortInfo> ports = QSerialPortInfo::availablePorts();
-		for (QSerialPortInfo info : ports) {
+		for (const QSerialPortInfo& info : ports) {
 			message_logger(QObject::tr("Found port \"%1\".").arg(info.systemLocation()));
 			port_devices << info.systemLocation();
 		}
@@ -39,14 +39,14 @@ inline QString setUpCctalkDevices(qtcc::BillValidatorDevice* bill_validator, qtc
 	// device name is the same; except for cctalk_address, which must be
 	// non-zero and must be different.
 
-	QString bill_device = AppSettings::getValue<QString>(QStringLiteral("bill_validator/serial_device_name"), port_devices.value(0));
-	quint8 bill_cctalk_address = AppSettings::getValue<quint8>(QStringLiteral("bill_validator/cctalk_address"),
+	auto bill_device = AppSettings::getValue<QString>(QStringLiteral("bill_validator/serial_device_name"), port_devices.value(0));
+	auto bill_cctalk_address = AppSettings::getValue<quint8>(QStringLiteral("bill_validator/cctalk_address"),
 			ccCategoryGetDefaultAddress(qtcc::CcCategory::BillValidator));
 	bool bill_des_encrypted = AppSettings::getValue<bool>(QStringLiteral("bill_validator/cctalk_des_encrypted"), false);
 	bool bill_checksum_16bit = AppSettings::getValue<bool>(QStringLiteral("bill_validator/cctalk_checksum_16bit"), false);
 
-	QString coin_device = AppSettings::getValue<QString>(QStringLiteral("coin_acceptor/serial_device_name"), port_devices.value(1));
-	quint8 coin_cctalk_address = AppSettings::getValue<quint8>(QStringLiteral("coin_acceptor/cctalk_address"),
+	auto coin_device = AppSettings::getValue<QString>(QStringLiteral("coin_acceptor/serial_device_name"), port_devices.value(1));
+	auto coin_cctalk_address = AppSettings::getValue<quint8>(QStringLiteral("coin_acceptor/cctalk_address"),
 			ccCategoryGetDefaultAddress(qtcc::CcCategory::CoinAcceptor));
 	bool coin_des_encrypted = AppSettings::getValue<bool>(QStringLiteral("coin_acceptor/cctalk_des_encrypted"), false);
 	bool coin_checksum_16bit = AppSettings::getValue<bool>(QStringLiteral("coin_acceptor/cctalk_checksum_16bit"), false);
@@ -58,11 +58,11 @@ inline QString setUpCctalkDevices(qtcc::BillValidatorDevice* bill_validator, qtc
 		if (bill_cctalk_address == coin_cctalk_address) {
 			return QObject::tr("! Two ccTalk devices have the same address in a multi-device serial network, cannot continue.");
 		}
-		if (bill_checksum_16bit || coin_checksum_16bit) {
-			return QObject::tr("! 16-bit checksum enabled for at least one ccTalk device in a multi-device serial network, cannot continue.");
-		}
 		if (bill_checksum_16bit != coin_checksum_16bit || bill_des_encrypted != coin_des_encrypted) {
 			return QObject::tr("! ccTalk or serial options are different for devices in a multi-device serial network, cannot continue.");
+		}
+		if (bill_checksum_16bit || coin_checksum_16bit) {
+			return QObject::tr("! 16-bit checksum enabled for at least one ccTalk device in a multi-device serial network, cannot continue.");
 		}
 	}
 
@@ -82,7 +82,7 @@ inline QString setUpCctalkDevices(qtcc::BillValidatorDevice* bill_validator, qtc
 		bill_validator->getLinkController().setLoggingOptions(show_full_response, show_serial_request, show_serial_response,
 				show_cctalk_request, show_cctalk_response);
 
-		bill_validator->setBillValidationFunction([](quint8 bill_id, const qtcc::CcIdentifier& identifier) {
+		bill_validator->setBillValidationFunction([]([[maybe_unused]] quint8 bill_id, [[maybe_unused]] const qtcc::CcIdentifier& identifier) {
 			return true;  // accept all supported bills
 		});
 
@@ -134,10 +134,6 @@ inline QString ccProcessLoggingMessage(QString msg, bool markup_output)
 		color = QStringLiteral("#B900CA");  // pink-violet
 	} else if (msg.startsWith(QStringLiteral("! ")) || msg.startsWith(QStringLiteral("!<")) || msg.startsWith(QStringLiteral("!>"))) {
 		color = QStringLiteral("#FF0000");  // red
-	}
-
-	if (!show_msg) {
-		return QString();
 	}
 
 	static MessageAccumulator acc1(1), acc2(2), acc3(3), acc4(4);

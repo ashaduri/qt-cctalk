@@ -1,5 +1,5 @@
 # Qt-ccTalk
-ccTalk protocol implementation in C++/Qt.
+[ccTalk](https://en.wikipedia.org/wiki/CcTalk) protocol implementation in C++/Qt.
 
 ## Project State
 Implementation is finished, but untested.

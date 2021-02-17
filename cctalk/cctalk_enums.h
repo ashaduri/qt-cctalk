@@ -9,6 +9,7 @@ License: BSD-3-Clause
 #include <QMap>
 #include <QString>
 #include <QObject>
+#include <utility>
 
 #include "helpers/debug.h"
 
@@ -949,8 +950,7 @@ inline QString ccBillRouteStatusGetDisplayableName(CcBillRouteStatus type)
 struct CcEventData {
 
 	/// Container requirement
-	CcEventData()
-	{ }
+	CcEventData() = default;
 
 	/// Constructor
 	CcEventData(quint8 arg_result_A, quint8 arg_result_B, CcCategory device_category)
@@ -977,7 +977,7 @@ struct CcEventData {
 		}
 	}
 
-	bool hasError() const
+	[[nodiscard]] bool hasError() const
 	{
 		return result_A == 0;
 	}
@@ -1064,7 +1064,7 @@ struct CcCountryScalingData {
 	quint8 decimal_places = 0;  /// Decimal places from country scaling data. 2 for Lari (10^2 Tetri in Lari)
 
 	/// If country code is unsupported, this returns false.
-	bool isValid() const
+	[[nodiscard]] bool isValid() const
 	{
 		return scaling_factor != 0 || decimal_places != 0;
 	}
@@ -1076,12 +1076,11 @@ struct CcCountryScalingData {
 struct CcIdentifier {
 
 	/// QMap requirement
-	CcIdentifier()
-	{ }
+	CcIdentifier() = default;
 
 	/// Parse ID string and store the results
-	CcIdentifier(QByteArray arg_id_string)
-			: id_string(arg_id_string)
+	explicit CcIdentifier(QByteArray arg_id_string)
+			: id_string(std::move(arg_id_string))
 	{
 		if (arg_id_string.size() == 7) {  // Bills
 			country = arg_id_string.left(2);

@@ -118,7 +118,7 @@ namespace debug_level {
 
 	const char* get_name(flag level)
 	{
-		std::map<flag, const char*>::const_iterator iter = s_debug_flags.level_names.find(level);
+		auto iter = s_debug_flags.level_names.find(level);
 		if (iter == s_debug_flags.level_names.end()) {
 			return "";
 		}
@@ -127,14 +127,14 @@ namespace debug_level {
 
 	const char* get_color_start(flag level)
 	{
-		std::map<flag, const char*>::const_iterator iter = s_debug_flags.level_colors.find(level);
+		auto iter = s_debug_flags.level_colors.find(level);
 		if (iter == s_debug_flags.level_colors.end()) {
 			return "";
 		}
 		return iter->second;
 	}
 
-	const char* get_color_stop(flag level)
+	const char* get_color_stop([[maybe_unused]] flag level)
 	{
 		return "\033[0m";
 	}
@@ -156,8 +156,8 @@ void debug_set_default_dests(debug_level::type levels, debug_dest::type dests)
 	std::vector<debug_level::flag> matched;
 	debug_level::get_matched_levels_array(levels, matched);
 
-	for(std::vector<debug_level::flag>::const_iterator iter = matched.begin(); iter != matched.end(); ++iter) {
-		s_debug_default_dests[*iter] = dests;
+	for(auto iter : matched) {
+		s_debug_default_dests[iter] = dests;
 	}
 }
 
@@ -242,7 +242,7 @@ namespace {
 		#elif defined HAVE_REENTRANT_LOCALTIME && HAVE_REENTRANT_LOCALTIME
 			const struct std::tm* ltmp = std::localtime(&timet);
 		#else
-			struct std::tm ltm;
+			struct std::tm ltm{};
 			localtime_r(&timet, &ltm);  // use reentrant localtime_r (posix/bsd and related)
 			const struct std::tm* ltmp = &ltm;
 		#endif
@@ -276,8 +276,7 @@ void debug_send_to_stream(debug_level::flag level, const std::string& msg, debug
 	}
 
 	if (dests.to_ulong() & debug_dest::def) {
-
-		std::map<debug_level::flag, debug_dest::type>::const_iterator iter = s_debug_default_dests.find(level);
+		auto iter = s_debug_default_dests.find(level);
 
 		if (iter == s_debug_default_dests.end()) {
 			if (level != debug_level::error) {
@@ -342,8 +341,7 @@ void debug_send_to_stream(debug_level::flag level, const std::string& msg, debug
 
 
 	if (val & debug_dest::file) {
-
-		std::map< debug_level::flag, std::pair<QMutex*, std::string> >::const_iterator iter = s_debug_output_files.find(level);
+		auto iter = s_debug_output_files.find(level);
 
 		if (iter != s_debug_output_files.end()) {
 			std::string file = iter->second.second;

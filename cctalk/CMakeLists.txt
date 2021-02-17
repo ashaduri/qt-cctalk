@@ -20,6 +20,7 @@ target_link_libraries(cctalk
 		Qt5::SerialPort
 	PRIVATE
 		compiler_warnings
+		cctalk_helpers
 )
 
 

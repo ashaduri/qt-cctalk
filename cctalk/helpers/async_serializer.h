@@ -30,10 +30,10 @@ class AsyncSerializer : public QObject {
 
 		/// Constructor. finish_handler is executed when all functions are executed or
 		/// when stop() is called manually.
-		AsyncSerializer(FinishHandler finish_handler, bool delete_this_on_finish = true);
+		explicit AsyncSerializer(FinishHandler finish_handler, bool delete_this_on_finish = true);
 
 		/// Add an executor function to function list.
-		void add(ExecutorFunc func);
+		void add(const ExecutorFunc& func);
 
 		/// Start executing the functions. This function is non-blocking.
 		/// When a function call is finished, the next function from the list is executed
@@ -61,7 +61,7 @@ class AsyncSerializer : public QObject {
 		FinishHandler finish_handler_;  ///< Finish handler
 		bool delete_this_on_finish_ = false;  ///< Delete this object on finish
 		QVector<ExecutorFunc> executors_;  ///< Executor functions
-		int current_func_index_;  ///< An index of currently executing function in executors_.
+		int current_func_index_ = 0;  ///< An index of currently executing function in executors_.
 
 };
 

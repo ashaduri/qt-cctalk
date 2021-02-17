@@ -117,7 +117,7 @@ void MainWindow::runSerialThreads()
 
 	// Bill validator
 	{
-		connect(&bill_validator_, &qtcc::CctalkDevice::creditAccepted, [this](quint8 id, qtcc::CcIdentifier identifier) {
+		connect(&bill_validator_, &qtcc::CctalkDevice::creditAccepted, [this]([[maybe_unused]] quint8 id, const qtcc::CcIdentifier& identifier) {
 			const char* prop_name = "integral_value";
 
 			quint64 existing_value = ui->entered_bills_lineedit->property(prop_name).toULongLong();
@@ -132,7 +132,7 @@ void MainWindow::runSerialThreads()
 
 	// Coin acceptor
 	{
-		connect(&coin_acceptor_, &qtcc::CctalkDevice::creditAccepted, [this](quint8 id, qtcc::CcIdentifier identifier) {
+		connect(&coin_acceptor_, &qtcc::CctalkDevice::creditAccepted, [this]([[maybe_unused]] quint8 id, const qtcc::CcIdentifier& identifier) {
 			const char* prop_name = "integral_value";
 
 			quint64 existing_value = ui->entered_coins_lineedit->property(prop_name).toULongLong();
@@ -153,11 +153,11 @@ void MainWindow::onStartStopBillValidatorClicked()
 	if (bill_validator_.getDeviceState() == CcDeviceState::ShutDown) {
 		bill_validator_.getLinkController().openPort([this](const QString& error_msg) {
 			if (error_msg.isEmpty()) {
-				bill_validator_.initialize([](const QString& init_error_msg) { });
+				bill_validator_.initialize([]([[maybe_unused]] const QString& init_error_msg) { });
 			}
 		});
 	} else {
-		bill_validator_.shutdown([this](const QString& error_msg) {
+		bill_validator_.shutdown([this]([[maybe_unused]] const QString& error_msg) {
 			// Close the port once the device is "shut down"
 			bill_validator_.getLinkController().closePort();
 		});
@@ -172,7 +172,7 @@ void MainWindow::onToggleBillAcceptClicked()
 	bool rejecting = bill_validator_.getDeviceState() == CcDeviceState::NormalRejecting;
 	if (accepting || rejecting) {
 		CcDeviceState new_state = accepting ? CcDeviceState::NormalRejecting : CcDeviceState::NormalAccepting;
-		bill_validator_.requestSwitchDeviceState(new_state, [](const QString& error_msg) {
+		bill_validator_.requestSwitchDeviceState(new_state, []([[maybe_unused]] const QString& error_msg) {
 			// nothing
 		});
 	} else {
@@ -188,11 +188,11 @@ void MainWindow::onStartStopCoinAcceptorClicked()
 	if (coin_acceptor_.getDeviceState() == CcDeviceState::ShutDown) {
 		coin_acceptor_.getLinkController().openPort([this](const QString& error_msg) {
 			if (error_msg.isEmpty()) {
-				coin_acceptor_.initialize([](const QString& init_error_msg) { });
+				coin_acceptor_.initialize([]([[maybe_unused]] const QString& init_error_msg) { });
 			}
 		});
 	} else {
-		coin_acceptor_.shutdown([this](const QString& error_msg) {
+		coin_acceptor_.shutdown([this]([[maybe_unused]] const QString& error_msg) {
 			// Close the port once the device is "shut down"
 			coin_acceptor_.getLinkController().closePort();
 		});
@@ -207,7 +207,7 @@ void MainWindow::onToggleCoinAcceptClicked()
 	bool rejecting = coin_acceptor_.getDeviceState() == CcDeviceState::NormalRejecting;
 	if (accepting || rejecting) {
 		CcDeviceState new_state = accepting ? CcDeviceState::NormalRejecting : CcDeviceState::NormalAccepting;
-		coin_acceptor_.requestSwitchDeviceState(new_state, [](const QString& error_msg) {
+		coin_acceptor_.requestSwitchDeviceState(new_state, []([[maybe_unused]] const QString& error_msg) {
 			// nothing
 		});
 	} else {

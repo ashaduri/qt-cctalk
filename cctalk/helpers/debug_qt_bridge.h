@@ -11,19 +11,10 @@ License: BSD-3-Clause
 #include "debug.h"
 
 
-namespace internal {
+namespace DebugQtMessageFlagsHolder {
 
-	template <typename Dummy>
-	struct DebugQtMessageFlagsStaticHolder {
-		static bool suppress_messages;
-		static QMutex mutex;
-	};
-
-	// definitions
-	template<typename Dummy> bool DebugQtMessageFlagsStaticHolder<Dummy>::suppress_messages = false;
-	template<typename Dummy> QMutex DebugQtMessageFlagsStaticHolder<Dummy>::mutex;
-
-	using DebugQtMessageFlagsHolder = DebugQtMessageFlagsStaticHolder<void>;  // one (and only) specialization.
+	inline bool suppress_messages = false;
+	inline QMutex mutex;
 
 }
 
@@ -31,9 +22,9 @@ namespace internal {
 /// Enable / disable showing of Qt messages. Returns the old value.
 inline bool debug_qt_suppress_messages(bool suppress)
 {
-	QMutexLocker locker(&internal::DebugQtMessageFlagsHolder::mutex);
-	bool old_value = internal::DebugQtMessageFlagsHolder::suppress_messages;
-	internal::DebugQtMessageFlagsHolder::suppress_messages = suppress;
+	QMutexLocker locker(&DebugQtMessageFlagsHolder::mutex);
+	bool old_value = DebugQtMessageFlagsHolder::suppress_messages;
+	DebugQtMessageFlagsHolder::suppress_messages = suppress;
 	return old_value;
 }
 
@@ -60,8 +51,8 @@ class DebugQtError : public std::logic_error {
 inline void debug_qt5_message_handler(QtMsgType type, const QMessageLogContext& context, const QString& msg)
 {
 	{
-		QMutexLocker locker(&internal::DebugQtMessageFlagsHolder::mutex);
-		if (internal::DebugQtMessageFlagsHolder::suppress_messages) {
+		QMutexLocker locker(&DebugQtMessageFlagsHolder::mutex);
+		if (DebugQtMessageFlagsHolder::suppress_messages) {
 			// fatal errors still abort (Qt does that).
 			return;
 		}

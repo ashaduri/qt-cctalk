@@ -12,7 +12,7 @@ namespace qtcc {
 
 SerialWorker::SerialWorker()
 {
-	connect(this, &SerialWorker::portError, [this](QString error_msg) {
+	connect(this, &SerialWorker::portError, [this](const QString& error_msg) {
 		emit logMessage(tr("! Serial port %1 error: %2").arg(serial_port_ ? serial_port_->portName() : tr("[unknown]")).arg(error_msg));
 	});
 }

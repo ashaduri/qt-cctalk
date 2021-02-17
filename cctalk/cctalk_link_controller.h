@@ -52,7 +52,7 @@ class CctalkLinkController : public QObject {
 		CctalkLinkController();
 
 		/// Destructor
-		virtual ~CctalkLinkController();
+		~CctalkLinkController() override;
 
 
 		/// Set ccTalk options. Call before opening the device.
@@ -63,7 +63,7 @@ class CctalkLinkController : public QObject {
 				bool show_cctalk_request, bool show_cctalk_response);
 
 		/// Open the serial port.
-		void openPort(std::function<void(const QString& error_msg)> finish_callback);
+		void openPort(const std::function<void(const QString& error_msg)>& finish_callback);
 
 		/// Close the serial port.
 		void closePort();
@@ -127,7 +127,7 @@ class CctalkLinkController : public QObject {
 
 		/// A helper function for writing response handlers.
 		void executeOnReturn(quint64 sent_request_id,
-				std::function<void(quint64 request_id, const QString& error_msg, const QByteArray& command_data)> callback);
+				const std::function<void(quint64 request_id, const QString& error_msg, const QByteArray& command_data)>& callback) const;
 
 
 	protected slots:

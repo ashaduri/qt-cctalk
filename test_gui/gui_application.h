@@ -23,10 +23,6 @@ class GuiApplication : public QObject {
 		/// Construct only ONCE.
 		GuiApplication(int& par_argc, char**& par_argv);
 
-		/// Virtual destructor
-		virtual ~GuiApplication();
-
-
 		/// Return QApplication instance
 		static QApplication* qappInstance();
 
@@ -53,9 +49,9 @@ class GuiApplication : public QObject {
 
 		/// QApplication instance. We use a pointer here and never delete it,
 		/// because Qt may decide to delete it itself.
-		QApplication* qapp_ = 0;
+		QApplication* qapp_ = nullptr;
 
-		MainWindow* main_window_ = 0;  ///< The main window
+		MainWindow* main_window_ = nullptr;  ///< The main window
 
 };
 

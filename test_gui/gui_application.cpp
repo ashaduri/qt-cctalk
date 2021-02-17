@@ -25,7 +25,7 @@ License: BSD-3-Clause
 namespace {
 
 	/// Application instance
-	GuiApplication* s_application_instance = 0;
+	GuiApplication* s_application_instance = nullptr;
 
 }
 
@@ -39,12 +39,9 @@ class GuiApplicationImpl : public QApplication {
 				: QApplication(argc, argv)
 		{ }
 
-		/// Virtual destructor
-		virtual ~GuiApplicationImpl()
-		{ }
 
 		/// This adds exception handling to QCoreApplication::notify().
-		virtual bool notify(QObject* receiver, QEvent* ev) override
+		bool notify(QObject* receiver, QEvent* ev) override
 		{
 			// Qt doesn't support throwing exceptions from signals handlers,
 			// so we have to catch them here. Catching them allows at least
@@ -92,15 +89,10 @@ GuiApplication::GuiApplication(int& par_argc, char**& par_argv)
 	QCoreApplication::setApplicationName(QStringLiteral("Qt-ccTalk GUI"));
 
 	qapp_ = app;
-	qapp_->setQuitOnLastWindowClosed(false);  // better manage it explicitly
+	QApplication::setQuitOnLastWindowClosed(false);  // better manage it explicitly
 
 	QObject::connect(qapp_, SIGNAL(aboutToQuit()), this, SLOT(quitCleanup()));
 }
-
-
-
-GuiApplication::~GuiApplication()
-{ }
 
 
 
@@ -157,7 +149,7 @@ int GuiApplication::run()
 	// The Main Loop
 	debug_out_info("Entering main loop.");
 
-	int status = qapp_->exec();
+	int status = QApplication::exec();
 
 	if (status == 0) {  // don't print if it's an error, because the application may be in unstable state
 		debug_out_info("Main loop exited.");

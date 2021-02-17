@@ -13,27 +13,6 @@ License: BSD-3-Clause
 namespace qtcc {
 
 
-namespace {
-
-	/// Calculate CRC16 checksum as per ccTalk requirements.
-	inline quint16 calculateCrcLoop_CCITT_A(const QByteArray& data)
-	{
-		const quint16 seed = 0x0000;
-		quint16 crc = seed;
-		for (int i = 0; i < data.size(); ++i ) {
-			crc = quint16(crc ^ (quint8(data[i]) << 8));
-			for (int j = 0; j < 8; ++j) {
-				if (crc & 0x8000)
-					crc = quint16((crc << 1) ^ 0x1021); // 0001.0000 0010.0001 = x^12 + x^5 + 1 ( + x^16 )
-				else
-					crc = quint16(crc << 1);
-			}
-		}
-		return crc;
-	}
-
-}
-
 
 
 CctalkLinkController::CctalkLinkController()
@@ -59,7 +38,8 @@ CctalkLinkController::CctalkLinkController()
 	connect(serial_worker_.data(), &SerialWorker::logMessage, this, &CctalkLinkController::logMessage, Qt::QueuedConnection);
 
 	// Log message structure errors
-	connect(this, &CctalkLinkController::ccResponseMessageStructureError, [this](quint64 request_id, const QString& error_msg) {
+	connect(this, &CctalkLinkController::ccResponseMessageStructureError, [this]([[maybe_unused]] quint64 request_id,
+			const QString& error_msg) {
 		emit logMessage(error_msg);
 	});
 
@@ -121,7 +101,7 @@ void CctalkLinkController::setLoggingOptions(bool show_full_response, bool show_
 
 
 
-void CctalkLinkController::openPort(std::function<void(const QString& error_msg)> finish_callback)
+void CctalkLinkController::openPort(const std::function<void(const QString& error_msg)>& finish_callback)
 {
 	emit openPortInWorker(port_device_);  // Queued
 	connect(serial_worker_.data(), &SerialWorker::portError, [=](const QString& error_msg) {
@@ -198,7 +178,7 @@ quint64 CctalkLinkController::ccRequest(CcHeader command, const QByteArray& data
 
 
 void CctalkLinkController::executeOnReturn(quint64 sent_request_id,
-		std::function<void(quint64 request_id, const QString& error_msg, const QByteArray& command_data)> callback)
+		const std::function<void(quint64 request_id, const QString& error_msg, const QByteArray& command_data)>& callback) const
 {
 	if (sent_request_id == 0) {  // nothing was sent
 		return;

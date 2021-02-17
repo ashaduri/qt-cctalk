@@ -5,6 +5,7 @@ License: BSD-3-Clause
 
 #include <memory>
 #include <QStringList>
+#include <utility>
 
 #include "cctalk_device.h"
 #include "helpers/debug.h"
@@ -20,7 +21,8 @@ CctalkDevice::CctalkDevice()
 	connect(&link_controller_, &CctalkLinkController::logMessage, this, &CctalkDevice::logMessage);
 
 	// Log data decode errors
-	connect(this, &CctalkDevice::ccResponseDataDecodeError, [this](quint64 request_id, const QString& error_msg) {
+	connect(this, &CctalkDevice::ccResponseDataDecodeError, [this]([[maybe_unused]] quint64 request_id, const
+			QString& error_msg) {
 		emit logMessage(error_msg);
 	});
 
@@ -41,12 +43,12 @@ CctalkLinkController& CctalkDevice::getLinkController()
 
 void CctalkDevice::setBillValidationFunction(BillValidatorFunc validator)
 {
-	bill_validator_func_ = validator;
+	bill_validator_func_ = std::move(validator);
 }
 
 
 
-bool CctalkDevice::initialize(std::function<void(const QString& error_msg)> finish_callback)
+bool CctalkDevice::initialize(const std::function<void(const QString& error_msg)>& finish_callback)
 {
 	if (getDeviceState() != CcDeviceState::ShutDown) {
 		logMessage(tr("! Cannot initialize device that is in %1 state.").arg(ccDeviceStateGetDisplayableName(getDeviceState())));
@@ -60,7 +62,7 @@ bool CctalkDevice::initialize(std::function<void(const QString& error_msg)> fini
 
 
 
-bool CctalkDevice::shutdown(std::function<void(const QString& error_msg)> finish_callback)
+bool CctalkDevice::shutdown(const std::function<void(const QString& error_msg)>& finish_callback)
 {
 	return requestSwitchDeviceState(CcDeviceState::ShutDown, [=](const QString& error_msg) {
 		finish_callback(error_msg);
@@ -111,9 +113,9 @@ void CctalkDevice::timerIteration()
 	// The device didn't respond to alive check and is assumed uninitialized,
 	// see if it came back and if so, initialize it.
 	if (getDeviceState() == CcDeviceState::UninitializedDown) {
-		requestCheckAlive([=](const QString& error_msg, bool alive) {
+		requestCheckAlive([=]([[maybe_unused]] const QString& error_msg, bool alive) {
 			if (alive) {
-				requestSwitchDeviceState(CcDeviceState::Initialized, [=](const QString& local_error_msg) {
+				requestSwitchDeviceState(CcDeviceState::Initialized, [=]([[maybe_unused]] const QString& local_error_msg) {
 					timer_iteration_task_running_ = false;
 				});
 			} else {
@@ -127,15 +129,15 @@ void CctalkDevice::timerIteration()
 	// Default to bill / coin rejection.
 	if (getDeviceState() == CcDeviceState::Initialized) {
 		// Perform a self-check and see if everything's ok.
-		requestSelfCheck([=](const QString& error_msg, CcFaultCode fault_code) {
+		requestSelfCheck([=]([[maybe_unused]] const QString& error_msg, CcFaultCode fault_code) {
 			if (fault_code == CcFaultCode::Ok) {
 				// The device is OK, resume normal rejecting mode.
-				requestSwitchDeviceState(CcDeviceState::NormalRejecting, [=](const QString& local_error_msg) {
+				requestSwitchDeviceState(CcDeviceState::NormalRejecting, [=]([[maybe_unused]] const QString& local_error_msg) {
 					timer_iteration_task_running_ = false;
 				});
 			} else {
 				// The device is not ok, resume diagnostics polling mode.
-				requestSwitchDeviceState(CcDeviceState::DiagnosticsPolling, [=](const QString& local_error_msg) {
+				requestSwitchDeviceState(CcDeviceState::DiagnosticsPolling, [=]([[maybe_unused]] const QString& local_error_msg) {
 					timer_iteration_task_running_ = false;
 				});
 			}
@@ -174,10 +176,10 @@ void CctalkDevice::timerIteration()
 	// If we're in diagnostics polling mode, poll the fault code until it's resolved,
 	// then switch to rejecting mode.
 	if (getDeviceState() == CcDeviceState::DiagnosticsPolling) {
-		requestSelfCheck([=](const QString& error_msg, CcFaultCode fault_code) {
+		requestSelfCheck([=]([[maybe_unused]] const QString& error_msg, CcFaultCode fault_code) {
 			if (fault_code == CcFaultCode::Ok) {
 				// The error has been resolved, switch to rejecting mode.
-				requestSwitchDeviceState(CcDeviceState::NormalRejecting, [=](const QString& state_error_msg) {
+				requestSwitchDeviceState(CcDeviceState::NormalRejecting, [=]([[maybe_unused]] const QString& state_error_msg) {
 					timer_iteration_task_running_ = false;
 				});
 			} else {  // the fault is still there
@@ -191,7 +193,7 @@ void CctalkDevice::timerIteration()
 	// to the loss of the event table (and, therefore, credit). Just re-initialize it, the
 	// NormalRejecting state will be enabled and the event table will be read, if everything's ok.
 	if (getDeviceState() == CcDeviceState::UnexpectedDown) {
-		requestSwitchDeviceState(CcDeviceState::Initialized, [=](const QString& error_msg) {
+		requestSwitchDeviceState(CcDeviceState::Initialized, [=]([[maybe_unused]] const QString& error_msg) {
 			timer_iteration_task_running_ = false;
 		});
 		return;
@@ -201,7 +203,7 @@ void CctalkDevice::timerIteration()
 	// that the device was probably reset externally, with possible loss of credits.
 	// Assume it needs initialization.
 	if (getDeviceState() == CcDeviceState::ExternalReset) {
-		requestSwitchDeviceState(CcDeviceState::Initialized, [=](const QString& error_msg) {
+		requestSwitchDeviceState(CcDeviceState::Initialized, [=]([[maybe_unused]] const QString& error_msg) {
 			timer_iteration_task_running_ = false;
 		});
 		return;
@@ -210,7 +212,7 @@ void CctalkDevice::timerIteration()
 
 
 
-bool CctalkDevice::requestSwitchDeviceState(CcDeviceState state, std::function<void(const QString& error_msg)> finish_callback)
+bool CctalkDevice::requestSwitchDeviceState(CcDeviceState state, const std::function<void(const QString& error_msg)>& finish_callback)
 {
 	emit logMessage(tr("Requested device state change from %1 to: %2")
 			.arg(ccDeviceStateGetDisplayableName(getDeviceState())).arg(ccDeviceStateGetDisplayableName(state)));
@@ -264,11 +266,6 @@ bool CctalkDevice::requestSwitchDeviceState(CcDeviceState state, std::function<v
 		}
 
 		case CcDeviceState::UnexpectedDown:
-			setDeviceState(state);
-			event_timer_.setInterval(not_alive_polling_interval_msec_);
-			finish_callback(QString());
-			return true;
-
 		case CcDeviceState::ExternalReset:
 			setDeviceState(state);
 			event_timer_.setInterval(not_alive_polling_interval_msec_);
@@ -282,7 +279,7 @@ bool CctalkDevice::requestSwitchDeviceState(CcDeviceState state, std::function<v
 
 
 
-bool CctalkDevice::switchStateInitialized(std::function<void(const QString& error_msg)> finish_callback)
+bool CctalkDevice::switchStateInitialized(const std::function<void(const QString& error_msg)>& finish_callback)
 {
 	DBG_ASSERT_RETURN(device_state_ == CcDeviceState::ShutDown || device_state_ == CcDeviceState::ExternalReset
 			|| device_state_ == CcDeviceState::UnexpectedDown || device_state_ == CcDeviceState::UninitializedDown, false);
@@ -292,7 +289,7 @@ bool CctalkDevice::switchStateInitialized(std::function<void(const QString& erro
 
 	auto aser = new AsyncSerializer(  // auto-deleted
 		// Finish callback
-		[=](AsyncSerializer* serializer) {
+		[=]([[maybe_unused]] AsyncSerializer* serializer) {
 			if (shared_error->isEmpty()) {
 				setDeviceState(CcDeviceState::Initialized);
 				finish_callback(*shared_error);
@@ -392,7 +389,7 @@ bool CctalkDevice::switchStateInitialized(std::function<void(const QString& erro
 
 
 
-bool CctalkDevice::switchStateNormalAccepting(std::function<void(const QString& error_msg)> finish_callback)
+bool CctalkDevice::switchStateNormalAccepting(const std::function<void(const QString& error_msg)>& finish_callback)
 {
 	DBG_ASSERT_RETURN(device_state_ == CcDeviceState::Initialized
 			|| device_state_ == CcDeviceState::NormalRejecting || device_state_ == CcDeviceState::DiagnosticsPolling, false);
@@ -412,7 +409,7 @@ bool CctalkDevice::switchStateNormalAccepting(std::function<void(const QString& 
 
 
 
-bool CctalkDevice::switchStateNormalRejecting(std::function<void(const QString& error_msg)> finish_callback)
+bool CctalkDevice::switchStateNormalRejecting(const std::function<void(const QString& error_msg)>& finish_callback)
 {
 	DBG_ASSERT_RETURN(device_state_ == CcDeviceState::Initialized
 			|| device_state_ == CcDeviceState::NormalAccepting || device_state_ == CcDeviceState::DiagnosticsPolling, false);
@@ -432,7 +429,7 @@ bool CctalkDevice::switchStateNormalRejecting(std::function<void(const QString& 
 
 
 
-bool CctalkDevice::switchStateDiagnosticsPolling(std::function<void(const QString& error_msg)> finish_callback)
+bool CctalkDevice::switchStateDiagnosticsPolling(const std::function<void(const QString& error_msg)>& finish_callback)
 {
 	DBG_ASSERT_RETURN(device_state_ == CcDeviceState::Initialized
 			|| device_state_ == CcDeviceState::NormalAccepting || device_state_ == CcDeviceState::NormalRejecting, false);
@@ -454,7 +451,7 @@ bool CctalkDevice::switchStateDiagnosticsPolling(std::function<void(const QStrin
 
 
 
-bool CctalkDevice::switchStateShutDown(std::function<void(const QString& error_msg)> finish_callback)
+bool CctalkDevice::switchStateShutDown(const std::function<void(const QString& error_msg)>& finish_callback)
 {
 	// If the device is in accepting mode, switch it off
 	if (device_state_ == CcDeviceState::NormalAccepting) {
@@ -472,7 +469,7 @@ bool CctalkDevice::switchStateShutDown(std::function<void(const QString& error_m
 
 
 
-void CctalkDevice::requestCheckAlive(std::function<void(const QString& error_msg, bool alive)> finish_callback)
+void CctalkDevice::requestCheckAlive(const std::function<void(const QString& error_msg, bool alive)>& finish_callback)
 {
 	// This can be before the callback connection because it's queued.
 	quint64 sent_request_id = link_controller_.ccRequest(CcHeader::SimplePoll, QByteArray());
@@ -496,7 +493,7 @@ void CctalkDevice::requestCheckAlive(std::function<void(const QString& error_msg
 
 
 
-void CctalkDevice::requestManufacturingInfo(std::function<void(const QString& error_msg, CcCategory category, const QString& info)> finish_callback)
+void CctalkDevice::requestManufacturingInfo(const std::function<void(const QString& error_msg, CcCategory category, const QString& info)>& finish_callback)
 {
 	auto shared_error = std::make_shared<QString>();
 	auto category = std::make_shared<CcCategory>();
@@ -504,7 +501,7 @@ void CctalkDevice::requestManufacturingInfo(std::function<void(const QString& er
 
 	auto aser = new AsyncSerializer(  // auto-deleted
 		// Finish callback
-		[=](AsyncSerializer* serializer) {
+		[=]([[maybe_unused]] AsyncSerializer* serializer) {
 			QString info = infos->join(QStringLiteral("\n"));
 
 			// Log the info
@@ -521,7 +518,7 @@ void CctalkDevice::requestManufacturingInfo(std::function<void(const QString& er
 	// Category
 	aser->add([=](AsyncSerializer* serializer) {
 		quint64 sent_request_id = link_controller_.ccRequest(CcHeader::GetEquipmentCategory, QByteArray());
-		link_controller_.executeOnReturn(sent_request_id, [=](quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
+		link_controller_.executeOnReturn(sent_request_id, [=]([[maybe_unused]] quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
 			if (!error_msg.isEmpty()) {
 				*shared_error = error_msg;
 			} else {
@@ -537,7 +534,7 @@ void CctalkDevice::requestManufacturingInfo(std::function<void(const QString& er
 	// Product code
 	aser->add([=](AsyncSerializer* serializer) {
 		quint64 sent_request_id = link_controller_.ccRequest(CcHeader::GetProductCode, QByteArray());
-		link_controller_.executeOnReturn(sent_request_id, [=](quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
+		link_controller_.executeOnReturn(sent_request_id, [=]([[maybe_unused]] quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
 			if (!error_msg.isEmpty()) {
 				*shared_error = error_msg;
 			} else {
@@ -552,7 +549,7 @@ void CctalkDevice::requestManufacturingInfo(std::function<void(const QString& er
 	// Build code
 	aser->add([=](AsyncSerializer* serializer) {
 		quint64 sent_request_id = link_controller_.ccRequest(CcHeader::GetBuildCode, QByteArray());
-		link_controller_.executeOnReturn(sent_request_id, [=](quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
+		link_controller_.executeOnReturn(sent_request_id, [=]([[maybe_unused]] quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
 			if (!error_msg.isEmpty()) {
 				*shared_error = error_msg;
 			} else {
@@ -567,7 +564,7 @@ void CctalkDevice::requestManufacturingInfo(std::function<void(const QString& er
 	// Manufacturer
 	aser->add([=](AsyncSerializer* serializer) {
 		quint64 sent_request_id = link_controller_.ccRequest(CcHeader::GetManufacturer, QByteArray());
-		link_controller_.executeOnReturn(sent_request_id, [=](quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
+		link_controller_.executeOnReturn(sent_request_id, [=]([[maybe_unused]] quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
 			if (!error_msg.isEmpty()) {
 				*shared_error = error_msg;
 			} else {
@@ -582,7 +579,7 @@ void CctalkDevice::requestManufacturingInfo(std::function<void(const QString& er
 	// S/N
 	aser->add([=](AsyncSerializer* serializer) {
 		quint64 sent_request_id = link_controller_.ccRequest(CcHeader::GetSerialNumber, QByteArray());
-		link_controller_.executeOnReturn(sent_request_id, [=](quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
+		link_controller_.executeOnReturn(sent_request_id, [=]([[maybe_unused]] quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
 			if (!error_msg.isEmpty()) {
 				*shared_error = error_msg;
 			} else {
@@ -597,7 +594,7 @@ void CctalkDevice::requestManufacturingInfo(std::function<void(const QString& er
 	// Software revision
 	aser->add([=](AsyncSerializer* serializer) {
 		quint64 sent_request_id = link_controller_.ccRequest(CcHeader::GetSoftwareRevision, QByteArray());
-		link_controller_.executeOnReturn(sent_request_id, [=](quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
+		link_controller_.executeOnReturn(sent_request_id, [=]([[maybe_unused]] quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
 			if (!error_msg.isEmpty()) {
 				*shared_error = error_msg;
 			} else {
@@ -612,7 +609,7 @@ void CctalkDevice::requestManufacturingInfo(std::function<void(const QString& er
 	// ccTalk command set revision
 	aser->add([=](AsyncSerializer* serializer) {
 		quint64 sent_request_id = link_controller_.ccRequest(CcHeader::GetCommsRevision, QByteArray());
-		link_controller_.executeOnReturn(sent_request_id, [=](quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
+		link_controller_.executeOnReturn(sent_request_id, [=]([[maybe_unused]] quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
 			if (!error_msg.isEmpty()) {
 				*shared_error = error_msg;
 			} else {
@@ -632,7 +629,7 @@ void CctalkDevice::requestManufacturingInfo(std::function<void(const QString& er
 
 
 
-void CctalkDevice::requestPollingInterval(std::function<void(const QString& error_msg, quint64 msec)> finish_callback)
+void CctalkDevice::requestPollingInterval(const std::function<void(const QString& error_msg, quint64 msec)>& finish_callback)
 {
 	quint64 sent_request_id = link_controller_.ccRequest(CcHeader::GetPollingPriority, QByteArray());
 	link_controller_.executeOnReturn(sent_request_id, [=](quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
@@ -649,8 +646,8 @@ void CctalkDevice::requestPollingInterval(std::function<void(const QString& erro
 			return;
 		}
 
-		quint64 unit = command_data[0];
-		quint64 value = command_data[1];
+		auto unit = command_data[0];
+		auto value = static_cast<unsigned char>(command_data[1]);
 
 		quint64 ms_multiplier = 1;
 		switch(unit) {
@@ -664,11 +661,12 @@ void CctalkDevice::requestPollingInterval(std::function<void(const QString& erro
 			case 7: ms_multiplier = 1000UL * 60 * 60 * 24 * 7; break;
 			case 8: ms_multiplier = 1000UL * 60 * 60 * 24 * 7 * 30; break;
 			case 9: ms_multiplier = 1000UL * 31557600; break;
+			default: DBG_ASSERT(0); break;
 		}
 
 		// 0,0 means "see the device docs".
 		// 0,255 means "use hw device poll line".
-		quint64 interval_ms = ms_multiplier * value;
+		quint64 interval_ms = ms_multiplier * quint64(value);
 
 		finish_callback(QString(), interval_ms);
 	});
@@ -676,7 +674,7 @@ void CctalkDevice::requestPollingInterval(std::function<void(const QString& erro
 
 
 
-void CctalkDevice::requestSetInhibitStatus(quint8 accept_mask1, quint8 accept_mask2, std::function<void(const QString& error_msg)> finish_callback)
+void CctalkDevice::requestSetInhibitStatus(quint8 accept_mask1, quint8 accept_mask2, const std::function<void(const QString& error_msg)>& finish_callback)
 {
 	QByteArray command_arg;
 	// lower 8 and higher 8, 16 coins/bills total.
@@ -702,7 +700,7 @@ void CctalkDevice::requestSetInhibitStatus(quint8 accept_mask1, quint8 accept_ma
 
 
 
-void CctalkDevice::requestSetMasterInhibitStatus(bool inhibit, std::function<void(const QString& error_msg)> finish_callback)
+void CctalkDevice::requestSetMasterInhibitStatus(bool inhibit, const std::function<void(const QString& error_msg)>& finish_callback)
 {
 	QByteArray command_arg;
 	command_arg.append(char(inhibit ? 0x0 : 0x1));  // 0 means master inhibit active.
@@ -745,7 +743,7 @@ void CctalkDevice::requestSetMasterInhibitStatus(bool inhibit, std::function<voi
 
 
 
-void CctalkDevice::requestMasterInhibitStatus(std::function<void(const QString& error_msg, bool inhibit)> finish_callback)
+void CctalkDevice::requestMasterInhibitStatus(const std::function<void(const QString& error_msg, bool inhibit)>& finish_callback)
 {
 	quint64 sent_request_id = link_controller_.ccRequest(CcHeader::GetMasterInhibitStatus, QByteArray());
 	link_controller_.executeOnReturn(sent_request_id, [=](quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
@@ -770,7 +768,7 @@ void CctalkDevice::requestMasterInhibitStatus(std::function<void(const QString& 
 
 
 void CctalkDevice::requestSetBillOperatingMode(bool use_stacker, bool use_escrow,
-		std::function<void(const QString& error_msg)> finish_callback)
+		const std::function<void(const QString& error_msg)>& finish_callback)
 {
 	QByteArray command_arg;
 	unsigned int mask = 0;
@@ -802,7 +800,7 @@ void CctalkDevice::requestSetBillOperatingMode(bool use_stacker, bool use_escrow
 
 
 
-void CctalkDevice::requestIdentifiers(std::function<void(const QString& error_msg, const QMap<quint8, CcIdentifier>& identifiers)> finish_callback)
+void CctalkDevice::requestIdentifiers(const std::function<void(const QString& error_msg, const QMap<quint8, CcIdentifier>& identifiers)>& finish_callback)
 {
 	if (device_category_ != CcCategory::CoinAcceptor && device_category_ != CcCategory::BillValidator) {
 		emit logMessage(tr("! Cannot request coin / bill identifiers from device category \"%2\".").arg(int(device_category_)));
@@ -819,7 +817,7 @@ void CctalkDevice::requestIdentifiers(std::function<void(const QString& error_ms
 
 	auto aser = new AsyncSerializer(  // auto-deleted
 		// Finish handler
-		[=](AsyncSerializer* serializer) {
+		[=]([[maybe_unused]] AsyncSerializer* serializer) {
 			if (!shared_error->isEmpty()) {
 				emit logMessage(tr("! Error getting %1 identifiers: %2").arg(coin_bill).arg(*shared_error));
 			} else {
@@ -848,7 +846,7 @@ void CctalkDevice::requestIdentifiers(std::function<void(const QString& error_ms
 
 		quint64 sent_request_id = link_controller_.ccRequest(CcHeader::GetVariableSet, QByteArray());
 		link_controller_.executeOnReturn(sent_request_id,
-				[=](quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
+				[=]([[maybe_unused]] quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
 			if (!error_msg.isEmpty()) {
 				// Do not set global error, this is a local error of an optional command.
 				// *shared_error = error_msg;
@@ -883,7 +881,7 @@ void CctalkDevice::requestIdentifiers(std::function<void(const QString& error_ms
 
 			quint64 sent_request_id = link_controller_.ccRequest(get_command, QByteArray().append(pos));
 			link_controller_.executeOnReturn(sent_request_id,
-					[=](quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
+					[=]([[maybe_unused]] quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
 				if (!error_msg.isEmpty()) {
 					*shared_error = error_msg;
 
@@ -939,7 +937,7 @@ void CctalkDevice::requestIdentifiers(std::function<void(const QString& error_ms
 
 			quint64 sent_request_id = link_controller_.ccRequest(CcHeader::GetCountryScalingFactor, country);
 			link_controller_.executeOnReturn(sent_request_id,
-					[=](quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
+					[=]([[maybe_unused]] quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
 				if (!error_msg.isEmpty()) {
 					*shared_error = error_msg;
 
@@ -949,7 +947,7 @@ void CctalkDevice::requestIdentifiers(std::function<void(const QString& error_ms
 						emit logMessage(tr("! Invalid scaling data for country %1.").arg(QString::fromLatin1(country)));
 					} else {
 						CcCountryScalingData data;
-						int lsb = command_data.at(0), msb = command_data.at(1);
+						auto lsb = quint16(command_data.at(0)), msb = quint16(command_data.at(1));
 						data.scaling_factor = quint16(lsb + msb*256);
 						data.decimal_places = command_data.at(2);
 						if (data.isValid()) {
@@ -973,8 +971,8 @@ void CctalkDevice::requestIdentifiers(std::function<void(const QString& error_ms
 
 
 
-void CctalkDevice::requestBufferedCreditEvents(std::function<void(const QString& error_msg,
-		quint8 event_counter, const QVector<CcEventData>& event_data)> finish_callback)
+void CctalkDevice::requestBufferedCreditEvents(const std::function<void(const QString& error_msg,
+		quint8 event_counter, const QVector<CcEventData>& event_data)>& finish_callback)
 {
 	// Coin acceptors use ReadBufferedCredit command.
 	// Bill validators use ReadBufferedBillEvents command.
@@ -1018,7 +1016,7 @@ void CctalkDevice::requestBufferedCreditEvents(std::function<void(const QString&
 			return;
 		}
 
-		quint8 event_counter = quint8(command_data[0]);
+		auto event_counter = quint8(command_data[0]);
 
 		// Log the table, but only if changed.
 		if (!event_log_read_ || last_event_num_ != event_counter) {
@@ -1045,7 +1043,7 @@ void CctalkDevice::requestBufferedCreditEvents(std::function<void(const QString&
 
 
 void CctalkDevice::processCreditEventLog(bool accepting, const QString& event_log_cmd_error_msg, quint8 event_counter,
-		const QVector<CcEventData>& event_data, std::function<void()> finish_callback)
+		const QVector<CcEventData>& event_data, const std::function<void()>& finish_callback)
 {
 	// The specification says:
 	// If ReadBufferedCredit times out, do nothing.
@@ -1088,7 +1086,7 @@ void CctalkDevice::processCreditEventLog(bool accepting, const QString& event_lo
 	// probably reset. Probable loss of credits.
 	if (last_event_num_ != 0 && event_counter == 0) {
 		emit logMessage(tr("! The device appears to have been reset, possible loss of credit."));
-		requestSwitchDeviceState(CcDeviceState::ExternalReset, [=](const QString& local_error_msg) {
+		requestSwitchDeviceState(CcDeviceState::ExternalReset, [=]([[maybe_unused]] const QString& local_error_msg) {
 			last_event_num_ = 0;
 			finish_callback();
 		});
@@ -1251,7 +1249,7 @@ void CctalkDevice::processCreditEventLog(bool accepting, const QString& event_lo
 
 	auto aser = new AsyncSerializer(  // auto-deleted
 		// Finish handler
-		[=](AsyncSerializer* serializer) {
+		[=]([[maybe_unused]] AsyncSerializer* serializer) {
 			finish_callback();
 		}
 	);
@@ -1260,12 +1258,12 @@ void CctalkDevice::processCreditEventLog(bool accepting, const QString& event_lo
 
 	// Check if the error is a problem enough to warrant a diagnostics polling mode
 	if (self_check_requested) {
-		aser->add([=](AsyncSerializer* serializer) {
+		aser->add([=]([[maybe_unused]] AsyncSerializer* serializer) {
 			emit logMessage(tr("* At least one new event has an error code, requesting SelfCheck to see if there is a global fault code."));
 
 			*shared_self_check_fault_code = CcFaultCode::CustomCommandError;
 
-			requestSelfCheck([=](const QString& error_msg, CcFaultCode fault_code) {
+			requestSelfCheck([=]([[maybe_unused]] const QString& error_msg, CcFaultCode fault_code) {
 				*shared_self_check_fault_code = fault_code;
 				aser->continueSequence(true);
 			});
@@ -1274,7 +1272,7 @@ void CctalkDevice::processCreditEventLog(bool accepting, const QString& event_lo
 
 	// Decide what to do with the bill currently in escrow
 	if (bill_routing_pending) {
-		aser->add([=](AsyncSerializer* serializer) {
+		aser->add([=]([[maybe_unused]] AsyncSerializer* serializer) {
 			bool accept = false;
 			CcIdentifier id = identifiers_.value(routing_req_event.bill_id);
 
@@ -1287,7 +1285,7 @@ void CctalkDevice::processCreditEventLog(bool accepting, const QString& event_lo
 			} else {
 				DBG_ASSERT(bill_validator_func_);
 				if (bill_validator_func_) {
-					accept = bill_validator_func_(routing_req_event.bill_id, id.id_string);
+					accept = bill_validator_func_(routing_req_event.bill_id, id);
 				}
 				emit logMessage(tr("* Bill validating function status: %1.").arg(accept ? tr("accept") : tr("reject")));
 			}
@@ -1297,7 +1295,7 @@ void CctalkDevice::processCreditEventLog(bool accepting, const QString& event_lo
 					.arg(int(routing_req_event.bill_id)).arg(QString::fromLatin1(id.id_string))
 					.arg(ccBillRouteCommandTypeGetDisplayableName(route_command)));
 
-			requestRouteBill(route_command, [=](const QString& error_msg, CcBillRouteStatus status) {
+			requestRouteBill(route_command, [=]([[maybe_unused]] const QString& error_msg, CcBillRouteStatus status) {
 				emit logMessage(tr("$ Bill (position %1, ID %2) routing status: %3.")
 						.arg(int(routing_req_event.bill_id)).arg(QString::fromLatin1(id.id_string))
 						.arg(ccBillRouteStatusGetDisplayableName(status)));
@@ -1309,13 +1307,13 @@ void CctalkDevice::processCreditEventLog(bool accepting, const QString& event_lo
 
 	// If the fault code was not Ok, switch to diagnostics mode.
 	if (self_check_requested) {
-		aser->add([=](AsyncSerializer* serializer) {
+		aser->add([=]([[maybe_unused]] AsyncSerializer* serializer) {
 			if (*shared_self_check_fault_code == CcFaultCode::Ok) {
 				aser->continueSequence(true);
 			} else {
 				emit logMessage(tr("* SelfCheck returned a non-OK fault code, switching to diagnostics polling mode."));
 
-				requestSwitchDeviceState(CcDeviceState::DiagnosticsPolling, [=](const QString& local_error_msg) {
+				requestSwitchDeviceState(CcDeviceState::DiagnosticsPolling, [=]([[maybe_unused]] const QString& local_error_msg) {
 					aser->continueSequence(true);
 				});
 			}
@@ -1328,7 +1326,7 @@ void CctalkDevice::processCreditEventLog(bool accepting, const QString& event_lo
 
 
 void CctalkDevice::requestRouteBill(CcBillRouteCommandType route,
-		std::function<void(const QString& error_msg, CcBillRouteStatus status)> finish_callback)
+		const std::function<void(const QString& error_msg, CcBillRouteStatus status)>& finish_callback)
 {
 	QByteArray command_arg;
 	command_arg.append(char(route));
@@ -1359,7 +1357,7 @@ void CctalkDevice::requestRouteBill(CcBillRouteCommandType route,
 
 
 
-void CctalkDevice::requestSelfCheck(std::function<void(const QString& error_msg, CcFaultCode fault_code)> finish_callback)
+void CctalkDevice::requestSelfCheck(const std::function<void(const QString& error_msg, CcFaultCode fault_code)>& finish_callback)
 {
 	quint64 sent_request_id = link_controller_.ccRequest(CcHeader::PerformSelfCheck, QByteArray());
 	link_controller_.executeOnReturn(sent_request_id, [=](quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
@@ -1383,7 +1381,7 @@ void CctalkDevice::requestSelfCheck(std::function<void(const QString& error_msg,
 
 
 
-void CctalkDevice::requestResetDevice(std::function<void(const QString& error_msg)> finish_callback)
+void CctalkDevice::requestResetDevice(const std::function<void(const QString& error_msg)>& finish_callback)
 {
 	quint64 sent_request_id = link_controller_.ccRequest(CcHeader::ResetDevice, QByteArray());
 	link_controller_.executeOnReturn(sent_request_id, [=](quint64 request_id, const QString& error_msg, const QByteArray& command_data) mutable {
@@ -1404,7 +1402,7 @@ void CctalkDevice::requestResetDevice(std::function<void(const QString& error_ms
 
 
 
-void CctalkDevice::requestResetDeviceWithState(std::function<void(const QString& error_msg)> finish_callback)
+void CctalkDevice::requestResetDeviceWithState(const std::function<void(const QString& error_msg)>& finish_callback)
 {
 	requestResetDevice([=](const QString& error_msg) {
 		if (error_msg.isEmpty()) {

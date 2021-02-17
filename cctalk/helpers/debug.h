@@ -12,6 +12,7 @@ License: BSD-3-Clause
 #include <exception>  // std::exception
 #include <cstddef>  // std::size_t
 #include <cstring>  // std::strncpy, for string.h
+#include <utility>
 #ifdef _MSC_VER
 	#include <string.h>  // strncpy_s
 #endif
@@ -72,7 +73,7 @@ class DebugFatalException : public std::exception {
 			msg_ = nullptr;  // protect from double-deletion compiler bugs
 		}
 
-		const char* what() const noexcept override
+		[[nodiscard]] const char* what() const noexcept override
 		{
 			return msg_;
 		}
@@ -104,7 +105,7 @@ namespace debug_level {
 	const char* get_name(flag level);
 
 	const char* get_color_start(flag level);
-	const char* get_color_stop(flag level);
+	const char* get_color_stop([[maybe_unused]] flag level);
 
 
 	template<class Container> inline
@@ -287,11 +288,11 @@ namespace debug_internal {
 	/// Internal libdebug class representing current position in source code.
 	struct COMMON_SYSTEM_LIBRARY_EXPORT DebugSourcePos {
 
-		inline DebugSourcePos(const std::string& par_file, unsigned int par_line, const std::string& par_func)
-				: func(par_func), line(par_line), file(par_file)
+		inline DebugSourcePos(std::string  par_file, unsigned int par_line, std::string  par_func)
+				: func(std::move(par_func)), line(par_line), file(std::move(par_file))
 		{ }
 
-		std::string str() const;
+		[[nodiscard]] std::string str() const;
 
 		std::string func;
 		unsigned int line;

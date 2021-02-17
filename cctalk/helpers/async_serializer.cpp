@@ -3,20 +3,22 @@ Copyright: (C) 2014 - 2021 Alexander Shaduri
 License: BSD-3-Clause
 ***************************************************************************/
 
+#include <utility>
+
 #include "async_serializer.h"
 #include "debug.h"
 
 
 
 AsyncSerializer::AsyncSerializer(FinishHandler finish_handler, bool delete_this_on_finish)
-		: finish_handler_(finish_handler), delete_this_on_finish_(delete_this_on_finish)
+		: finish_handler_(std::move(finish_handler)), delete_this_on_finish_(delete_this_on_finish)
 {
 	timer_.setSingleShot(true);
 }
 
 
 
-void AsyncSerializer::add(AsyncSerializer::ExecutorFunc func)
+void AsyncSerializer::add(const AsyncSerializer::ExecutorFunc& func)
 {
 	executors_ << func;
 }
@@ -59,7 +61,7 @@ void AsyncSerializer::executeNextFunc()
 {
 	++current_func_index_;  // initially -1
 
-	timer_.disconnect(&timer_, 0, 0, 0);
+	QTimer::disconnect(&timer_, nullptr, nullptr, nullptr);
 
 	ExecutorFunc func = executors_.value(current_func_index_);
 	DBG_ASSERT(func);

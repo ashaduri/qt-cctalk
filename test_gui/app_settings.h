@@ -16,8 +16,11 @@ License: BSD-3-Clause
 /// This class acts as a namespace for settings-changing functions,
 /// which are all static.
 class AppSettings {
-
 	public:
+
+		/// This object is non-constructible.
+		AppSettings() = delete;
+
 
 		/// Initialize application settings.
 		/// You must call this function before using any other functions of this class.
@@ -159,12 +162,6 @@ class AppSettings {
 
 		/// Return all keys for a group (prefix). If empty, return all keys.
 		static QStringList getKeys(const char* group);
-
-
-	private:
-
-		/// This object is non-constructible.
-		AppSettings() = delete;
 
 };
 

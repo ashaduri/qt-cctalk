@@ -14,7 +14,7 @@ License: BSD-3-Clause
 
 /// Message accumulator. Helps with identifying duplicate messages.
 struct MessageAccumulator {
-	MessageAccumulator(int buf_size) : buf(buf_size)
+	explicit MessageAccumulator(int buf_size) : buf(buf_size)
 	{ }
 
 	inline int push(QString msg)
@@ -28,7 +28,7 @@ struct MessageAccumulator {
 		index = (index+1) % buf.size();
 
 		int min_repetitions = buf[index].second;
-		for (auto p : buf) {
+		for (const auto& p : buf) {
 			min_repetitions = std::min(min_repetitions, p.second);
 		}
 		return min_repetitions;
