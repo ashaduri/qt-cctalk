@@ -19,6 +19,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v2
+      with:
+        version: 5.15.0
+
     - name: Create Build Environment
       run: cmake -E make_directory ${{runner.workspace}}/build
 
