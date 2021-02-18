@@ -36,14 +36,14 @@ License: BSD-3-Clause
 
 /// \def HAVE_REENTRANT_LOCALTIME
 /// Defined to 0 or 1. If 1, localtime() is reentrant.
-#ifndef HAVE_REENTRANT_LOCALTIME
-	// win32 and solaris localtime() is reentrant
-	#if defined _WIN32 || defined sun || defined __sun
-		#define HAVE_REENTRANT_LOCALTIME 1
-	#else
-		#define HAVE_REENTRANT_LOCALTIME 0
-	#endif
-#endif
+// #ifndef HAVE_REENTRANT_LOCALTIME
+// 	// win32 and solaris localtime() is reentrant
+// 	#if defined _WIN32 || defined sun || defined __sun
+// 		#define HAVE_REENTRANT_LOCALTIME 1
+// 	#else
+// 		#define HAVE_REENTRANT_LOCALTIME 0
+// 	#endif
+// #endif
 
 
 
@@ -218,10 +218,11 @@ namespace {
 		ret.reserve(msg.size() + 42);  // time + level (colored) + application
 
 		// This is not implemented in this version
-		if (format_flags.to_ulong() & debug_format::time) {  // print time
+		// if (format_flags.to_ulong() & debug_format::time) {  // print time
 			// don't use locale, the format doesn't depend on it.
 			// ret += hz::format_date("%Y-%m-%d %H:%M:%S: ", false);
-			const std::time_t timet = std::time(nullptr);
+			// const std::time_t timet = std::time(nullptr);
+		// }
 
 		if (format_flags.to_ulong() & debug_format::level) {  // print level name
 			bool use_color = (format_flags.to_ulong() & debug_format::color);
@@ -234,24 +235,6 @@ namespace {
 			if (use_color)
 				ret += debug_level::get_color_stop(level);
 		}
-
-		#if defined HAVE_WIN_SE_FUNCS && HAVE_WIN_SE_FUNCS
-			struct std::tm ltm;
-			localtime_s(&ltm, &timet);  // shut up msvc (it thinks std::localtime() is unsafe)
-			const struct std::tm* ltmp = &ltm;
-		#elif defined HAVE_REENTRANT_LOCALTIME && HAVE_REENTRANT_LOCALTIME
-			const struct std::tm* ltmp = std::localtime(&timet);
-		#else
-			struct std::tm ltm{};
-			localtime_r(&timet, &ltm);  // use reentrant localtime_r (posix/bsd and related)
-			const struct std::tm* ltmp = &ltm;
-		#endif
-			if (ltmp) {
-				// FIXME
-				// ret += hz::string_sprintf("%02d:%02d:%02d", ltmp->tm_hour, ltmp->tm_min, ltmp->tm_sec) + " ";
-			}
-		}
-
 
 		if (format_flags.to_ulong() & debug_format::appname) {  // print application name
 			ret += std::string("[") + s_debug_application_name + "] ";
