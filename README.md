@@ -12,11 +12,11 @@ Implementation is finished, but untested (I no longer have access to ccTalk devi
 ## Description
 
 This project provides:
-- High-level, type-safe API for ccTalk commands.
+- High-level, type-safe C++ API for ccTalk commands.
 - ccTalk device management (including serial port device management).
 - Controller and worker thread management for non-blocking communication with multiple ccTalk devices.
 - A test GUI application for testing ccTalk devices, inspecting sent / received commands,
-and providing an example source code for ccTalk library usage.
+and providing a source code example for ccTalk library usage.
 
 ## Structure Overview
 
@@ -43,12 +43,24 @@ These classes simply inherit `qtcc::CctalkDevice` to help you specify different 
 for bill validators and coin acceptors in a type-safe way.
 
 ### Directory `test_gui`
-A test GUI application to showcase the ccTalk API and its usage in a user application.
+The `test_gui` directory contains a GUI application to showcase the ccTalk API and its usage in a user application.
 It can also serve as an API debugger and device tester, displaying all the sent and received commands
 in a log window.
 
 #### Functions `MainWindow::runSerialThreads()`, `setUpCctalkDevices()`
 These functions show how to set up and use bill validator and/or coin acceptor devices within an application.
+
+#### Configuration
+The GUI uses .ini file for ccTalk device configuration. On Linux the file is located at
+`~/.config/Qt-ccTalk/Qt-ccTalk GUI.ini`.
+The function `setUpCctalkDevices()` lists the supported configuration keys.
+An example configuration file may look like this:
+```INI
+[bill_validator]
+serial_device_name="/dev/ttyUSB0"
+[cctalk]
+show_full_response=true
+```
 
 ## Copyright
 
