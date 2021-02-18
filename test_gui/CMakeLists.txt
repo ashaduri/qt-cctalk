@@ -13,8 +13,6 @@ set(gui_SOURCES
 	gui_application.cpp
 	gui_application.h
 	gui_main.cpp
-	logging_tools.h
-	main_tools.h
 	main_window.h
 	main_window.cpp
 	main_window.ui

@@ -5,8 +5,6 @@ License: BSD-3-Clause
 
 #include <QSettings>
 #include <QtGlobal>
-#include <QMutexLocker>
-#include <QMutex>
 #include <QCoreApplication>
 #include <QFileInfo>
 
@@ -19,16 +17,12 @@ namespace {
 
 	QSettings* s_app_settings = nullptr;
 
-	QMutex s_app_settings_mutex;  // construction lock
-
 }
 
 
 
 bool AppSettings::init()
 {
-	QMutexLocker locker(&s_app_settings_mutex);
-
 	// Load the system settings from the current directory
 	QSettings::setPath(QSettings::IniFormat, QSettings::SystemScope, QStringLiteral("."));
 
@@ -51,8 +45,6 @@ bool AppSettings::init()
 
 void AppSettings::sync()
 {
-	QMutexLocker locker(&s_app_settings_mutex);
-
 	DBG_ASSERT_MSG_FATAL(s_app_settings,
 			DBG_FUNC_MSG << "You must call settings_init() first.");
 
@@ -63,8 +55,6 @@ void AppSettings::sync()
 
 QString AppSettings::getUserSettingsFile()
 {
-	QMutexLocker locker(&s_app_settings_mutex);
-
 	DBG_ASSERT_MSG_FATAL(s_app_settings,
 			DBG_FUNC_MSG << "You must call settings_init() first.");
 
@@ -82,8 +72,6 @@ QString AppSettings::getUserSettingsDirectory()
 
 bool AppSettings::valueExists(const QString& key)
 {
-	QMutexLocker locker(&s_app_settings_mutex);
-
 	DBG_ASSERT_MSG_FATAL(s_app_settings,
 			DBG_FUNC_MSG << "You must call settings_init() first.");
 	return s_app_settings->contains(key);
@@ -100,8 +88,6 @@ bool AppSettings::valueExists(const char* key)
 
 void AppSettings::setValue(const QString& key, const QVariant& value)
 {
-	QMutexLocker locker(&s_app_settings_mutex);
-
 	DBG_ASSERT_MSG_FATAL(s_app_settings,
 			DBG_FUNC_MSG << "You must call settings_init() first.");
 	s_app_settings->setValue(key, value);
@@ -136,8 +122,6 @@ bool AppSettings::setValueIfNonExistent(const char* key, const QVariant& value)
 
 void AppSettings::remove(const QString& key)
 {
-	QMutexLocker locker(&s_app_settings_mutex);
-
 	DBG_ASSERT_MSG_FATAL(s_app_settings,
 			DBG_FUNC_MSG << "You must call settings_init() first.");
 	s_app_settings->remove(key);
@@ -154,8 +138,6 @@ void AppSettings::remove(const char* key)
 
 QVariant AppSettings::getValue(const QString& key)
 {
-	QMutexLocker locker(&s_app_settings_mutex);
-
 	DBG_ASSERT_MSG_FATAL(s_app_settings,
 			DBG_FUNC_MSG << "You must call settings_init() first.");
 
@@ -181,8 +163,6 @@ QVariant AppSettings::getValue(const char* key)
 
 QVariant AppSettings::getValue(const QString& key, const QVariant& default_value)
 {
-	QMutexLocker locker(&s_app_settings_mutex);
-
 	DBG_ASSERT_MSG_FATAL(s_app_settings,
 			DBG_FUNC_MSG << "You must call settings_init() first.");
 
@@ -200,8 +180,6 @@ QVariant AppSettings::getValue(const char* key, const QVariant& default_value)
 
 QStringList AppSettings::getKeys(const QString& group)
 {
-	QMutexLocker locker(&s_app_settings_mutex);
-
 	DBG_ASSERT_MSG_FATAL(s_app_settings,
 			DBG_FUNC_MSG << "You must call settings_init() first.");
 

@@ -7,15 +7,14 @@ License: BSD-3-Clause
 #define GUI_APPLICATION_H
 
 #include <QApplication>
-
+#include <QScopedPointer>
 
 
 class MainWindow;
 
 
-
-/// This class handles IDE startup / quit and encapsulates QGuiApplication-derived Application.
-class GuiApplication : public QObject {
+/// This class handles application startup / quit and encapsulates QGuiApplication-derived Application.
+class GuiApplication : public QApplication {
 	Q_OBJECT
 	public:
 
@@ -23,11 +22,8 @@ class GuiApplication : public QObject {
 		/// Construct only ONCE.
 		GuiApplication(int& par_argc, char**& par_argv);
 
-		/// Return QApplication instance
-		static QApplication* qappInstance();
-
-		/// Return GuiApplication instance
-		static GuiApplication* instance();
+		/// Destructor (scoped pointer member requirement)
+		~GuiApplication() override;
 
 		/// Initialize everything and run the main loop. Use quit() to exit it.
 		/// \return exit status.
@@ -47,11 +43,7 @@ class GuiApplication : public QObject {
 
 	private:
 
-		/// QApplication instance. We use a pointer here and never delete it,
-		/// because Qt may decide to delete it itself.
-		QApplication* qapp_ = nullptr;
-
-		MainWindow* main_window_ = nullptr;  ///< The main window
+		QScopedPointer<MainWindow> main_window_;  ///< The main window
 
 };
 

@@ -3,25 +3,12 @@ Copyright: (C) 2014 - 2021 Alexander Shaduri
 License: BSD-3-Clause
 ***************************************************************************/
 
-#include <iostream>  // std::cerr
+#include <iostream>  // std::cout
 #include <cstring>  // std::strcmp
-
-#ifdef _WIN32  // console stuff
-	/// Require WinXP (needed for console functions).
-// 	#define _WIN32_WINNT 0x0501  // this is set by cmake
-	#include <windows.h>
-	#include <wincon.h>
-	#include <cstdio>
-#else
-	#include <unistd.h>  // sleep
-#endif
-
 #include <QObject>
 #include <QMessageBox>
 
 #include "gui_application.h"
-// #include "version.h"
-#include "main_tools.h"
 
 
 
@@ -32,7 +19,7 @@ inline void printVersionInfo()
 	str += QStringLiteral("\n");
 	str += QObject::tr("Copyright (C) 2014 - 2021 Alexander Shaduri");
 	str += QStringLiteral("\n\n");
-	std::cerr << appQStringToConsole(str);
+	std::cout << str.toUtf8().constData();
 }
 
 
@@ -45,13 +32,14 @@ inline void printHelpInfo(const char* argv0)
 	str += QStringLiteral("    --help, -h\t\t") + QObject::tr("Display a short help information and exit.") + QStringLiteral("\n");
 	str += QStringLiteral("    --version, -V\t") + QObject::tr("Display version information and exit.") + QStringLiteral("\n");
 
-	std::cerr << appQStringToConsole(str);
+	std::cout << str.toUtf8().constData();
 }
 
 
 
-/// Implementation of main()
-int mainImpl(int argc, char** argv)
+/// Main entry point of the program. Note that there is no WinMain, it's
+/// automatically provided by Qt.
+int main(int argc, char** argv)
 {
 	bool help_mode = false;
 	bool version_mode = false;
@@ -64,46 +52,21 @@ int mainImpl(int argc, char** argv)
 		}
 	}
 
-
 	int status = 0;
 
-	// Check Qt version
-	QString run_qt_version, build_qt_version;
-	if (!appCheckQtVersion(run_qt_version, build_qt_version)) {
-		// Print this in both CLI and GUI mode, since the GUI creation may fail.
-		std::cerr << "Error: Executable \"" << argv[0] << "\" requires Qt " << appQStringToConsole(build_qt_version)
-				<< ", found Qt " << appQStringToConsole(run_qt_version) << ".\n";
-		new QApplication(argc, argv);  // needed for GUI
-		QString msg = QObject::tr("Executable \"%1\" requires Qt %2, found Qt %3.")
-				.arg(qAppName()).arg(build_qt_version).arg(run_qt_version);
-		QMessageBox::critical(0, QApplication::tr("Incompatible Qt Library Error"), msg, QMessageBox::Abort, 0);
-		status = 255;  // why not
-	}
+	if (help_mode) {
+		printVersionInfo();
+		printHelpInfo(argv[0]);
 
-	if (status == 0) {
-		if (help_mode) {
-			printVersionInfo();
-			printHelpInfo(argv[0]);
+	} else if (version_mode) {
+		printVersionInfo();
 
-		} else if (version_mode) {
-			printVersionInfo();
-
-		} else {  // application/solver mode
-			GuiApplication app(argc, argv);
-			status = app.run();
-		}
+	} else {  // application mode
+		GuiApplication app(argc, argv);
+		status = app.run();
 	}
 
 	return status;
-}
-
-
-
-/// Main entry point of the program. Note that there is no WinMain, it's
-/// automatically provided by Qt.
-int main(int argc, char** argv)
-{
-	return mainExceptionWrapper(argc, argv, mainImpl);
 }
 
 
