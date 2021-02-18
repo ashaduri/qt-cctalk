@@ -122,7 +122,7 @@ void MainWindow::runSerialThreads()
 
 			quint64 existing_value = ui->entered_bills_lineedit->property(prop_name).toULongLong();
 			quint64 divisor = 0;
-			quint64 value = identifier.getValue(divisor);  // in tetri
+			quint64 value = identifier.getValue(divisor);  // in cents
 
 			existing_value += value;
 			ui->entered_bills_lineedit->setProperty(prop_name, existing_value);
@@ -137,7 +137,7 @@ void MainWindow::runSerialThreads()
 
 			quint64 existing_value = ui->entered_coins_lineedit->property(prop_name).toULongLong();
 			quint64 divisor = 0;
-			quint64 value = identifier.getValue(divisor);  // in tetri
+			quint64 value = identifier.getValue(divisor);  // in cents
 
 			existing_value += value;
 			ui->entered_coins_lineedit->setProperty(prop_name, existing_value);

@@ -32,11 +32,11 @@ class MainWindow : public QMainWindow {
 		MainWindow();
 
 		/// Destructor
-		virtual ~MainWindow();
+		~MainWindow() override;
 
 		/// Window close event handler, reimplemented from QWidget::closeEvent().
 		/// Invokes closeRequested().
-		void closeEvent(QCloseEvent* ev);
+		void closeEvent(QCloseEvent* ev) override;
 
 		/// Try to close the program (also ask about unsaved documents, etc...).
 		/// Window close and menu quit actions invoke this.

@@ -1023,8 +1023,8 @@ inline quint64 ccCoinValueCodeGetValue(const QByteArray& three_char_code, quint8
 		{"010", {10, 0}},  // 10
 		{"020", {20, 0}},  // 20
 		{"025", {25, 0}},  // 25
-		{"050", {50, 0}},  // 50 tetri
-		{"100", {100, 0}},  // 100 tetri
+		{"050", {50, 0}},  // 50
+		{"100", {100, 0}},  // 100
 		{"200", {200, 0}},  // 200
 		{"250", {250, 0}},  // 250
 		{"500", {500, 0}},  // 500
@@ -1060,8 +1060,13 @@ inline quint64 ccCoinValueCodeGetValue(const QByteArray& three_char_code, quint8
 
 /// Country scaling data, as returned by GetCountryScalingFactor command.
 struct CcCountryScalingData {
-	quint16 scaling_factor = 1;  /// Scaling factor from country scaling data. The bill identifier values should be multiplied by this to get Tetri.
-	quint8 decimal_places = 0;  /// Decimal places from country scaling data. 2 for Lari (10^2 Tetri in Lari)
+	/// Scaling factor from country scaling data.
+	/// The bill identifier values should be
+	/// multiplied by this to get cents.
+	quint16 scaling_factor = 1;
+
+	/// Decimal places from country scaling data. 2 for USD (10^2 cents in USD)
+	quint8 decimal_places = 0;
 
 	/// If country code is unsupported, this returns false.
 	[[nodiscard]] bool isValid() const
@@ -1105,7 +1110,7 @@ struct CcIdentifier {
 	}
 
 	/// Get coin / bill value. The returned value should be divided by \c 10^divisor
-	/// to get a value in country currency (e.g. lari).
+	/// to get a value in country currency (e.g. USD).
 	/// For coin acceptors the divisor is always 1.
 	quint64 getValue(quint64& divisor) const
 	{

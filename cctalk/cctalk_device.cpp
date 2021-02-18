@@ -947,7 +947,8 @@ void CctalkDevice::requestIdentifiers(const std::function<void(const QString& er
 						emit logMessage(tr("! Invalid scaling data for country %1.").arg(QString::fromLatin1(country)));
 					} else {
 						CcCountryScalingData data;
-						auto lsb = quint16(command_data.at(0)), msb = quint16(command_data.at(1));
+						auto lsb = quint16(static_cast<unsigned char>(command_data.at(0)));
+						auto msb = quint16(static_cast<unsigned char>(command_data.at(1)));
 						data.scaling_factor = quint16(lsb + msb*256);
 						data.decimal_places = command_data.at(2);
 						if (data.isValid()) {
@@ -1373,7 +1374,7 @@ void CctalkDevice::requestSelfCheck(const std::function<void(const QString& erro
 			return;
 		}
 		// Decode the data
-		CcFaultCode fault_code = static_cast<CcFaultCode>(command_data.at(0));
+		auto fault_code = static_cast<CcFaultCode>(command_data.at(0));
 		emit logMessage(tr("* Self-check fault code: %1").arg(ccFaultCodeGetDisplayableName(fault_code)));
 		finish_callback(QString(), fault_code);
 	});
